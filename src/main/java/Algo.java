@@ -1,3 +1,7 @@
+import org.graphstream.graph.Edge;
+import org.graphstream.graph.Graph;
+import org.graphstream.graph.implementations.SingleGraph;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -10,30 +14,39 @@ public class Algo {
     public static void main(String[] args) throws IOException {
         Graph graph = readGraphFromFile("src/main/resources/edges.txt");
 
-        List<Edge> tree = findKruskalMinimumTree(graph);
-        int weight = calculateWeight(tree);
+        findKruskalMinimumTree(graph);
 
-        System.out.println("Kruskal Minimum Tree Weight: " + weight);
+        graph.display();
+    }
+
+    static void addEdge(Graph graph, int start, int end, int weight) {
+        Edge edge = graph.addEdge(start + "-" + end, String.valueOf(start), String.valueOf(end));
+        edge.setAttribute("ui.label", weight);
+        edge.setAttribute("weight", weight);
+        edge.getSourceNode().setAttribute("ui.label", start);
+        edge.getTargetNode().setAttribute("ui.label", end);
     }
 
     public static List<Edge> findKruskalMinimumTree(Graph graph) {
-        graph.getEdges().sort(Comparator.comparing(Edge::getWeight));
+        List<Edge> edges = new ArrayList<>(graph.getEdgeSet());
+        edges.sort(Comparator.comparing(e -> e.getAttribute("weight")));
 
-        int[] treeId = new int[graph.getNodesCount()];
+        int[] treeId = new int[graph.getNodeCount()];
 
-        for (int i = 0; i < graph.getNodesCount(); i++) {
+        for (int i = 0; i < graph.getNodeCount(); i++) {
             treeId[i] = i;
         }
 
         List<Edge> treeEdges = new ArrayList<>();
 
-        for (Edge edge : graph.getEdges()) {
-            if (treeId[edge.getStart()] != treeId[edge.getEnd()]) {
+        for (Edge edge : edges) {
+            if (treeId[edge.getSourceNode().getIndex()] != treeId[edge.getTargetNode().getIndex()]) {
                 treeEdges.add(edge);
-                int oldId = treeId[edge.getEnd()];
-                int newId = treeId[edge.getStart()];
+                edge.setAttribute("ui.style", "fill-color: red;");
+                int oldId = treeId[edge.getTargetNode().getIndex()];
+                int newId = treeId[edge.getSourceNode().getIndex()];
 
-                for (int i = 0; i < graph.getNodesCount(); i++) {
+                for (int i = 0; i < graph.getNodeCount(); i++) {
                     if (treeId[i] == oldId) {
                         treeId[i] = newId;
                     }
@@ -48,7 +61,7 @@ public class Algo {
         int sumWeight = 0;
 
         for (Edge edge : edges) {
-            sumWeight += edge.getWeight();
+            sumWeight += edge.getAttribute("weight", Integer.class);
         }
 
         return sumWeight;
@@ -57,7 +70,9 @@ public class Algo {
     public static Graph readGraphFromFile(String path) throws IOException {
         List<String> lines = Files.readAllLines(Paths.get(path));
 
-        List<Edge> edges = new ArrayList<>();
+        Graph graph = new SingleGraph("Graph");
+        graph.setStrict(false);
+        graph.setAutoCreate(true);
 
         for (String line : lines) {
             String[] tokens = line.split(" ");
@@ -65,11 +80,8 @@ public class Algo {
             Integer edgeEnd = Integer.parseInt(tokens[1]);
             Integer edgeWeight = Integer.parseInt(tokens[2]);
 
-            edges.add(new Edge(edgeStart, edgeEnd, edgeWeight));
+            addEdge(graph, edgeStart, edgeEnd, edgeWeight);
         }
-
-        Graph graph = new Graph();
-        graph.setEdges(edges);
 
         return graph;
     }
