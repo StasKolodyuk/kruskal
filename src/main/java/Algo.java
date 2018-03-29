@@ -3,39 +3,45 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class Algo {
 
     public static void main(String[] args) throws IOException {
-        List<Edge> edges = readGraphFromFile("src/main/resources/edges.txt");
-        List<Edge> tree = findKruskalMinimumTree(edges);
+        Graph graph = readGraphFromFile("src/main/resources/edges.txt");
+
+        List<Edge> tree = findKruskalMinimumTree(graph);
         int weight = calculateWeight(tree);
 
         System.out.println("Kruskal Minimum Tree Weight: " + weight);
     }
 
-    public static List<Edge> findKruskalMinimumTree(List<Edge> edges) {
-        edges.sort(Comparator.comparing(Edge::getWeight));
+    public static List<Edge> findKruskalMinimumTree(Graph graph) {
+        graph.getEdges().sort(Comparator.comparing(Edge::getWeight));
+
+        int[] treeId = new int[graph.getNodesCount()];
+
+        for (int i = 0; i < graph.getNodesCount(); i++) {
+            treeId[i] = i;
+        }
 
         List<Edge> treeEdges = new ArrayList<>();
-        Set<Integer> treeNodes = new HashSet<>();
 
-        for (Edge edge : edges) {
-            if (!willCreateCycle(treeNodes, edge)) {
+        for (Edge edge : graph.getEdges()) {
+            if (treeId[edge.getStart()] != treeId[edge.getEnd()]) {
                 treeEdges.add(edge);
-                treeNodes.add(edge.getStart());
-                treeNodes.add(edge.getEnd());
+                int oldId = treeId[edge.getEnd()];
+                int newId = treeId[edge.getStart()];
+
+                for (int i = 0; i < graph.getNodesCount(); i++) {
+                    if (treeId[i] == oldId) {
+                        treeId[i] = newId;
+                    }
+                }
             }
         }
 
         return treeEdges;
-    }
-
-    public static boolean willCreateCycle(Set<Integer> treeNodes, Edge edge) {
-        return treeNodes.contains(edge.getStart()) && treeNodes.contains(edge.getEnd());
     }
 
     public static int calculateWeight(List<Edge> edges) {
@@ -48,8 +54,9 @@ public class Algo {
         return sumWeight;
     }
 
-    public static List<Edge> readGraphFromFile(String path) throws IOException {
+    public static Graph readGraphFromFile(String path) throws IOException {
         List<String> lines = Files.readAllLines(Paths.get(path));
+
         List<Edge> edges = new ArrayList<>();
 
         for (String line : lines) {
@@ -61,7 +68,10 @@ public class Algo {
             edges.add(new Edge(edgeStart, edgeEnd, edgeWeight));
         }
 
-        return edges;
+        Graph graph = new Graph();
+        graph.setEdges(edges);
+
+        return graph;
     }
 
 }
